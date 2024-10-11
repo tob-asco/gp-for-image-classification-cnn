@@ -58,7 +58,7 @@ def train_model_one_batch(ind: inds.NN_individual,       # <- model to be traine
   X, y = X.to(ind.device), y.to(ind.device)
   y_pred = ind(X)
   if inds.NN_dna.loss_fn_dict[ind.dna.loss_fn_gene]['1hot']: # <- does the loss_fn need one-hot encoding?
-    loss = ind.loss_fn(y_pred, F.one_hot(y, num_classes=ind.CLASSIFICATION_CATEGORIES_COUNT).float())
+    loss = ind.loss_fn(y_pred, F.one_hot(y, num_classes=ind.PC.categories_count).float())
   else:
     loss = ind.loss_fn(y_pred, y)
   train_loss += loss
@@ -78,11 +78,11 @@ def test_model(ind: inds.NN_individual,            # <- model to be tested
       X, y = X.to(ind.device), y.to(ind.device)
       preds = ind(X)
       if inds.NN_dna.loss_fn_dict[ind.dna.loss_fn_gene]['1hot']: # <- does the loss_fn need one-hot encoding?
-        loss_batch = ind.loss_fn(preds, F.one_hot(y, num_classes=ind.CLASSIFICATION_CATEGORIES_COUNT).float())
+        loss_batch = ind.loss_fn(preds, F.one_hot(y, num_classes=ind.PC.categories_count).float())
       else:
         loss_batch = ind.loss_fn(preds, y)
       loss_total += loss_batch
-      acc_batch = functional.accuracy(preds, y, task="multiclass", num_classes=ind.CLASSIFICATION_CATEGORIES_COUNT)
+      acc_batch = functional.accuracy(preds, y, task="multiclass", num_classes=ind.PC.categories_count)
       acc_total += acc_batch
 
     loss_total /= len(test_dl)

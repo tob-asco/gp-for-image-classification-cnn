@@ -1,3 +1,4 @@
+import constants
 import torch
 from torch import nn
 import re
@@ -65,7 +66,7 @@ class NN_dna():
         self.loss_fn_gene = loss_fn
     
     #### Genotype To Phenotype Mappings (G2P) ####
-    def blocks_2d_G2P(self, COLOUR_CHANNEL_COUNT: int):
+    def blocks_2d_G2P(self, PC: constants.problem_constants):
         ''' build 'n return the full sequential from the gene information (genes_2d_block) 
             the first 2d_block needs to have as many in_channels as there are colour channels
             the others need to have as in_channels the number of out_channels from the previous block
@@ -73,7 +74,7 @@ class NN_dna():
         blocks_2d = nn.Sequential()
         for i in range(len(self.blocks_2d_gene)):
             if i == 0:
-                in_channels = COLOUR_CHANNEL_COUNT
+                in_channels = PC.channel_count
             else:
                 in_channels = self.blocks_2d_gene[i-1].out_channels
             blocks_2d.append(nn.Sequential(
@@ -126,18 +127,16 @@ class NN_dna():
 '''
 class NN_individual(nn.Module):
     def __init__(self,
-                 COLOUR_CHANNEL_COUNT: int,
-                 CLASSIFICATION_CATEGORIES_COUNT: int,
+                 PC: constants.problem_constants,
                  dna: NN_dna = NN_dna(),    # <- contains all genes
                  name: str = "nn0",         # <- name unique within a population/generation
                  device = "cpu"):
         super().__init__()
-        self.COLOUR_CHANNEL_COUNT = COLOUR_CHANNEL_COUNT
-        self.CLASSIFICATION_CATEGORIES_COUNT = CLASSIFICATION_CATEGORIES_COUNT
+        self.PC = PC
         self.dna = dna
-        self.blocks_2d = dna.blocks_2d_G2P(COLOUR_CHANNEL_COUNT)
+        self.blocks_2d = dna.blocks_2d_G2P(PC=PC)
         self.flatten = nn.Flatten(start_dim=1, end_dim=-1) # default is: start_dim = 1
-        self.lazyLin = nn.LazyLinear(out_features = CLASSIFICATION_CATEGORIES_COUNT) # automatically infers the number of channels
+        self.lazyLin = nn.LazyLinear(out_features = PC.categories_count) # automatically infers the number of channels
         self.name = name
         self.lr = dna.lr
         self.optimizer = dna.optimizer_G2P(self.parameters())
@@ -175,7 +174,7 @@ class NN_population:
             x = list(ind.accs.keys())  # Extract the epoch/batch labels (x-axis)
             y = [float(val.cpu().item()*100) for val in ind.accs.values()]  # Convert tensors to floats
             # Plot each individual's accuracies
-            plt.plot(x, y, marker='o', linestyle='-', label=f"{ind.name} [{ind.dna.toString()}] ({ind.running_acc:.2f} within {ind.elapsed_training_time:.1f}s) {ind.acc*100:.1f}%")
+            plt.plot(x, y, marker='o', linestyle='-', label=f"{ind.acc*100:.1f}% ({ind.running_acc:.2f} within {ind.elapsed_training_time:.1f}s) {ind.name} [{ind.dna.toString()}]")
         plt.xlabel('Epoch@Batch')  # Label for the x-axis
         plt.ylabel('Accuracy [%]')     # Label for the y-axis
         extra_title = "" if elapsed_time == 0 else f" (took {elapsed_time:.2f}s)"
@@ -186,4 +185,4 @@ class NN_population:
         plt.tight_layout(rect=[0, 0, 0.85, 1])  # Adjust plot area size to leave space for the legend
         plt.show()
 
-print(NN_population([NN_individual(1,10)]))
+#print(NN_population([NN_individual(1,10)]))
