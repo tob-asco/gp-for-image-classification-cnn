@@ -2,6 +2,7 @@ import torch
 from torch import nn
 import re
 import math
+import matplotlib.pyplot as plt
 
 # Calculate the image size after a layer has been applied assume all operations to be x/y symmetric
 def output_size(h_in, kernel_size, stride, padding):
@@ -131,6 +132,8 @@ class NN_individual(nn.Module):
                  name: str = "nn0",         # <- name unique within a population/generation
                  device = "cpu"):
         super().__init__()
+        self.COLOUR_CHANNEL_COUNT = COLOUR_CHANNEL_COUNT
+        self.CLASSIFICATION_CATEGORIES_COUNT = CLASSIFICATION_CATEGORIES_COUNT
         self.dna = dna
         self.blocks_2d = dna.blocks_2d_G2P(COLOUR_CHANNEL_COUNT)
         self.flatten = nn.Flatten(start_dim=1, end_dim=-1) # default is: start_dim = 1
@@ -156,4 +159,31 @@ class NN_individual(nn.Module):
         x = self.lazyLin(x)
         return x
 
-print(NN_individual(1,10))
+
+# created by Chat
+class NN_population:
+    ### Magic Methods ###
+    def __init__(self, individuals: list[NN_individual]): self.individuals = individuals
+    def __getitem__(self, index): return self.individuals[index]  # magic pop[i] access
+    def __len__(self): return len(self.individuals)  # magic len(pop)
+    def __setitem__(self, index, value): self.individuals[index] = value  # magic pop[i] = value
+    def __iter__(self): return iter(self.individuals)  # magic for-iterations
+    
+    def plot_accs(self, elapsed_time = 0):
+        plt.figure(figsize=(15, 6))  # Set the figure size
+        for ind in sorted(self.individuals, key=lambda ind: ind.running_acc, reverse=True):
+            x = list(ind.accs.keys())  # Extract the epoch/batch labels (x-axis)
+            y = [float(val.cpu().item()*100) for val in ind.accs.values()]  # Convert tensors to floats
+            # Plot each individual's accuracies
+            plt.plot(x, y, marker='o', linestyle='-', label=f"{ind.name} [{ind.dna.toString()}] ({ind.running_acc:.2f} within {ind.elapsed_training_time:.1f}s) {ind.acc*100:.1f}%")
+        plt.xlabel('Epoch@Batch')  # Label for the x-axis
+        plt.ylabel('Accuracy [%]')     # Label for the y-axis
+        extra_title = "" if elapsed_time == 0 else f" (took {elapsed_time:.2f}s)"
+        plt.title('Accuracy per Epoch and Batch' + extra_title)  # Title of the plot
+        plt.xticks(rotation=45, ha='right')  # Rotate the x-axis labels for better readability
+        plt.grid(True)  # Show grid
+        plt.legend(loc='upper left', bbox_to_anchor=(1, 1)) # legend on the right
+        plt.tight_layout(rect=[0, 0, 0.85, 1])  # Adjust plot area size to leave space for the legend
+        plt.show()
+
+print(NN_population([NN_individual(1,10)]))
